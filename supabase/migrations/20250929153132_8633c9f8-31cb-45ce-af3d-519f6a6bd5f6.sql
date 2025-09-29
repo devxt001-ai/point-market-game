@@ -35,7 +35,7 @@ CREATE TABLE public.trades (
   stock_symbol TEXT NOT NULL,
   trade_type TEXT NOT NULL CHECK (trade_type IN ('buy', 'sell')),
   order_type TEXT NOT NULL CHECK (order_type IN ('market', 'limit')),
-  quantity INTEGER NOT NULL CHECK (quantity > 0),
+  quantity INTEGER NOT NULL,
   price_per_share DECIMAL(10,4) NOT NULL,
   total_amount DECIMAL(15,2) NOT NULL,
   limit_price DECIMAL(10,4),
@@ -69,7 +69,7 @@ CREATE TABLE public.subscriptions (
   bonus_points DECIMAL(15,2) DEFAULT 0,
   features JSONB DEFAULT '{}',
   starts_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  expires_at TIMESTAMP WITH TIME ZONE,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -106,7 +106,6 @@ CREATE TABLE public.wallet_transactions (
 INSERT INTO public.stocks (symbol, company_name, current_price, market_cap) VALUES
 ('AAPL', 'Apple Inc.', 150.00, 2400000000000),
 ('TSLA', 'Tesla Inc.', 200.00, 630000000000),
-('MSFT', 'Microsoft Corporation', 300.00, 2200000000000),
 ('GOOGL', 'Alphabet Inc.', 2500.00, 1600000000000),
 ('AMZN', 'Amazon.com Inc.', 3200.00, 1600000000000),
 ('NVDA', 'NVIDIA Corporation', 400.00, 980000000000),
@@ -174,16 +173,32 @@ CREATE TRIGGER update_leaderboard_trigger
 -- Create function to handle new user registration
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  username_value TEXT;
+  counter INTEGER := 0;
 BEGIN
+  -- Get the base username
+  username_value := COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1));
+  
+  -- Handle username uniqueness by adding a counter if needed
+  WHILE EXISTS (SELECT 1 FROM public.users WHERE username = username_value) LOOP
+    counter := counter + 1;
+    username_value := COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)) || counter::TEXT;
+  END LOOP;
+  
   INSERT INTO public.users (auth_user_id, username, email, avatar_url)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
+    username_value,
     NEW.email,
     NEW.raw_user_meta_data->>'avatar_url'
   );
   
   RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE LOG 'Error in handle_new_user: %', SQLERRM;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
