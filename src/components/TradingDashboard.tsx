@@ -2,7 +2,20 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, Users, Activity, Loader2, LogOut, Clock, Wifi, AlertCircle, Trophy } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  BarChart3,
+  Users,
+  Activity,
+  Loader2,
+  LogOut,
+  Clock,
+  Wifi,
+  AlertCircle,
+  Trophy,
+} from "lucide-react";
 import { finnhubService, type StockQuote } from "@/services/finnhubService";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,10 +38,34 @@ interface LeaderboardEntry {
 }
 
 const mockLeaderboard: LeaderboardEntry[] = [
-  { rank: 1, username: "TradingPro", portfolioValue: 125430.50, change: 5430.50, changePercent: 4.52 },
-  { rank: 2, username: "WolfOfWallSt", portfolioValue: 118750.25, change: 3750.25, changePercent: 3.26 },
-  { rank: 3, username: "StockMaster", portfolioValue: 114250.75, change: 2250.75, changePercent: 2.01 },
-  { rank: 4, username: "BullRun2024", portfolioValue: 112500.00, change: 1500.00, changePercent: 1.35 },
+  {
+    rank: 1,
+    username: "TradingPro",
+    portfolioValue: 125430.5,
+    change: 5430.5,
+    changePercent: 4.52,
+  },
+  {
+    rank: 2,
+    username: "WolfOfWall",
+    portfolioValue: 118750.25,
+    change: 3750.25,
+    changePercent: 3.26,
+  },
+  {
+    rank: 3,
+    username: "StockMaster",
+    portfolioValue: 114250.75,
+    change: 2250.75,
+    changePercent: 2.01,
+  },
+  {
+    rank: 4,
+    username: "BullRun2024",
+    portfolioValue: 112500.0,
+    change: 1500.0,
+    changePercent: 1.35,
+  },
 ];
 
 export default function TradingDashboard() {
@@ -43,7 +80,7 @@ export default function TradingDashboard() {
     try {
       await supabase.auth.signOut();
     } catch (error) {
-      console.error('Error logging out:', error);
+      console.error("Error logging out:", error);
     }
   };
 
@@ -57,8 +94,8 @@ export default function TradingDashboard() {
         setStocks(stockData);
         setLastUpdated(new Date());
       } catch (err) {
-        console.error('Error fetching stocks:', err);
-        setError('Failed to load stock data. Please try again later.');
+        console.error("Error fetching stocks:", err);
+        setError("Failed to load stock data. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -71,17 +108,17 @@ export default function TradingDashboard() {
 
     return () => clearInterval(interval);
   }, []);
-  
+
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 2,
     }).format(amount);
   };
 
   const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('en-US').format(num);
+    return new Intl.NumberFormat("en-US").format(num);
   };
 
   return (
@@ -99,23 +136,27 @@ export default function TradingDashboard() {
                   <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                     Point Market
                   </h1>
-                  <p className="text-xs text-muted-foreground">Trading Dashboard</p>
+                  <p className="text-xs text-muted-foreground">
+                    Trading Dashboard
+                  </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-4">
-                <Badge 
-                  variant="outline" 
+                <Badge
+                  variant="outline"
                   className="bg-success/10 border-success/30 text-success hover:bg-success/20 transition-colors px-3 py-1"
                 >
                   <div className="w-2 h-2 bg-success rounded-full mr-2 animate-pulse"></div>
                   Market Open
                 </Badge>
-                
+
                 {lastUpdated && (
                   <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
                     <Clock className="h-4 w-4" />
-                    <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
+                    <span>
+                      Last updated: {lastUpdated.toLocaleTimeString()}
+                    </span>
                   </div>
                 )}
               </div>
@@ -124,23 +165,33 @@ export default function TradingDashboard() {
             <div className="flex items-center gap-4">
               <div className="hidden md:flex items-center gap-6">
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Portfolio Value</p>
-                  <p className="text-xl font-bold text-primary">{formatCurrency(110501.00)}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Portfolio Value
+                  </p>
+                  <p className="text-xl font-bold text-primary">
+                    {formatCurrency(110501.0)}
+                  </p>
                 </div>
-                
+
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Today's P&L</p>
-                  <p className="text-lg font-bold text-success">+{formatCurrency(1250.75)}</p>
+                  <p className="text-lg font-bold text-success">
+                    +{formatCurrency(1250.75)}
+                  </p>
                 </div>
               </div>
 
               {user && (
                 <div className="flex items-center gap-3">
                   <div className="hidden md:block text-right">
-                    <p className="text-sm font-medium text-foreground">Welcome back!</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                    <p className="text-sm font-medium text-foreground">
+                      Welcome back!
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {user.email}
+                    </p>
                   </div>
-                  
+
                   <Button
                     variant="outline"
                     size="sm"
@@ -159,16 +210,21 @@ export default function TradingDashboard() {
 
       <div className="container mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          
           {/* Enhanced Quick Stats */}
           <div className="lg:col-span-4 grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card className="bg-gradient-to-br from-success/10 via-success/5 to-transparent border-success/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground font-medium">Wallet Balance</p>
-                    <p className="text-3xl font-bold text-success mt-1">{formatCurrency(15750.50)}</p>
-                    <p className="text-xs text-success/70 mt-1">Available for trading</p>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      Wallet Balance
+                    </p>
+                    <p className="text-3xl font-bold text-success mt-1">
+                      {formatCurrency(15750.5)}
+                    </p>
+                    <p className="text-xs text-success/70 mt-1">
+                      Available for trading
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-success/20 rounded-xl flex items-center justify-center">
                     <DollarSign className="h-7 w-7 text-success" />
@@ -181,9 +237,15 @@ export default function TradingDashboard() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground font-medium">Total Holdings</p>
-                    <p className="text-3xl font-bold text-primary mt-1">{formatCurrency(94750.50)}</p>
-                    <p className="text-xs text-primary/70 mt-1">Portfolio value</p>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      Total Holdings
+                    </p>
+                    <p className="text-3xl font-bold text-primary mt-1">
+                      {formatCurrency(94750.5)}
+                    </p>
+                    <p className="text-xs text-primary/70 mt-1">
+                      Portfolio value
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center">
                     <BarChart3 className="h-7 w-7 text-primary" />
@@ -196,8 +258,12 @@ export default function TradingDashboard() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground font-medium">Today's P&L</p>
-                    <p className="text-3xl font-bold text-success mt-1">+{formatCurrency(1250.75)}</p>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      Today's P&L
+                    </p>
+                    <p className="text-3xl font-bold text-success mt-1">
+                      +{formatCurrency(1250.75)}
+                    </p>
                     <p className="text-xs text-success/70 mt-1">+1.14% today</p>
                   </div>
                   <div className="w-12 h-12 bg-success/20 rounded-xl flex items-center justify-center">
@@ -211,9 +277,13 @@ export default function TradingDashboard() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground font-medium">Leaderboard Rank</p>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      Leaderboard Rank
+                    </p>
                     <p className="text-3xl font-bold text-accent mt-1">#47</p>
-                    <p className="text-xs text-accent/70 mt-1">Top 15% globally</p>
+                    <p className="text-xs text-accent/70 mt-1">
+                      Top 15% globally
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-accent/20 rounded-xl flex items-center justify-center">
                     <Users className="h-7 w-7 text-accent" />
@@ -233,14 +303,20 @@ export default function TradingDashboard() {
                       <Activity className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-xl font-bold">Live Market Data</CardTitle>
-                      <p className="text-sm text-muted-foreground">Real-time stock prices from Finnhub</p>
+                      <CardTitle className="text-xl font-bold">
+                        Live Market Data
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Real-time stock prices from Finnhub
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-                      <span className="text-xs text-muted-foreground">Live</span>
+                      <span className="text-xs text-muted-foreground">
+                        Live
+                      </span>
                     </div>
                     {lastUpdated && (
                       <span className="text-xs text-muted-foreground">
@@ -255,7 +331,9 @@ export default function TradingDashboard() {
                   <div className="flex items-center justify-center py-12">
                     <div className="flex items-center gap-3">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                      <span className="text-muted-foreground">Loading market data...</span>
+                      <span className="text-muted-foreground">
+                        Loading market data...
+                      </span>
                     </div>
                   </div>
                 ) : error ? (
@@ -263,10 +341,12 @@ export default function TradingDashboard() {
                     <div className="w-16 h-16 bg-destructive/20 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Activity className="h-8 w-8 text-destructive" />
                     </div>
-                    <p className="text-destructive font-medium mb-2">Failed to load market data</p>
+                    <p className="text-destructive font-medium mb-2">
+                      Failed to load market data
+                    </p>
                     <p className="text-sm text-muted-foreground">{error}</p>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       onClick={() => window.location.reload()}
                       className="mt-4"
@@ -276,51 +356,70 @@ export default function TradingDashboard() {
                   </div>
                 ) : stocks.length === 0 ? (
                   <div className="flex items-center justify-center py-8">
-                    <p className="text-muted-foreground">No stock data available</p>
+                    <p className="text-muted-foreground">
+                      No stock data available
+                    </p>
                   </div>
                 ) : (
                   <div className="grid gap-4">
                     {stocks.map((stock) => (
-                      <Card key={stock.symbol} className="bg-gradient-to-r from-card/50 to-card border-border/30 hover:border-primary/30 transition-all duration-300 hover:shadow-lg group">
+                      <Card
+                        key={stock.symbol}
+                        className="bg-gradient-to-r from-card/50 to-card border-border/30 hover:border-primary/30 transition-all duration-300 hover:shadow-lg group"
+                      >
                         <CardContent className="p-5">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                                <span className="font-bold text-primary text-lg">{stock.symbol.charAt(0)}</span>
+                                <span className="font-bold text-primary text-lg">
+                                  {stock.symbol.charAt(0)}
+                                </span>
                               </div>
                               <div>
-                                <h3 className="font-bold text-lg text-foreground">{stock.symbol}</h3>
-                                <p className="text-sm text-muted-foreground">{stock.company}</p>
+                                <h3 className="font-bold text-lg text-foreground">
+                                  {stock.symbol}
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {stock.company}
+                                </p>
                               </div>
                             </div>
-                            
+
                             <div className="flex items-center gap-6">
                               <div className="text-right">
-                                <p className="text-2xl font-bold text-foreground">{formatCurrency(stock.price)}</p>
+                                <p className="text-2xl font-bold text-foreground">
+                                  {formatCurrency(stock.price)}
+                                </p>
                                 <div className="flex items-center gap-1 justify-end">
                                   {stock.change >= 0 ? (
                                     <TrendingUp className="h-4 w-4 text-success" />
                                   ) : (
                                     <TrendingDown className="h-4 w-4 text-destructive" />
                                   )}
-                                  <span className={`text-sm font-medium ${
-                                    stock.change >= 0 ? 'text-success' : 'text-destructive'
-                                  }`}>
-                                    {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)} ({stock.changePercent.toFixed(2)}%)
+                                  <span
+                                    className={`text-sm font-medium ${
+                                      stock.change >= 0
+                                        ? "text-success"
+                                        : "text-destructive"
+                                    }`}
+                                  >
+                                    {stock.change >= 0 ? "+" : ""}
+                                    {stock.change.toFixed(2)} (
+                                    {stock.changePercent.toFixed(2)}%)
                                   </span>
                                 </div>
                               </div>
-                              
+
                               <div className="flex gap-2">
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
                                   className="bg-success hover:bg-success/90 text-white px-6 py-2 font-medium shadow-md hover:shadow-lg transition-all duration-200"
                                 >
                                   Buy
                                 </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
+                                <Button
+                                  size="sm"
+                                  variant="outline"
                                   className="border-destructive text-destructive hover:bg-destructive hover:text-white px-6 py-2 font-medium transition-all duration-200"
                                 >
                                   Sell
@@ -346,25 +445,39 @@ export default function TradingDashboard() {
                     <Users className="h-6 w-6 text-accent" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl font-bold">Leaderboard</CardTitle>
-                    <p className="text-sm text-muted-foreground">Top performers</p>
+                    <CardTitle className="text-xl font-bold">
+                      Leaderboard
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Top performers
+                    </p>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 {mockLeaderboard.map((entry, index) => (
-                  <div key={entry.rank} className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-card/50 to-card/30 hover:from-accent/10 hover:to-accent/5 transition-all duration-300 group">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
-                      entry.rank === 1 ? 'bg-yellow-500/20 text-yellow-600' :
-                      entry.rank === 2 ? 'bg-gray-400/20 text-gray-600' :
-                      entry.rank === 3 ? 'bg-orange-500/20 text-orange-600' :
-                      'bg-accent/20 text-accent'
-                    }`}>
-                      {entry.rank <= 3 ? (
-                        entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : '🥉'
-                      ) : (
-                        entry.rank
-                      )}
+                  <div
+                    key={entry.rank}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-card/50 to-card/30 hover:from-accent/10 hover:to-accent/5 transition-all duration-300 group"
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
+                        entry.rank === 1
+                          ? "bg-yellow-500/20 text-yellow-600"
+                          : entry.rank === 2
+                          ? "bg-gray-400/20 text-gray-600"
+                          : entry.rank === 3
+                          ? "bg-orange-500/20 text-orange-600"
+                          : "bg-accent/20 text-accent"
+                      }`}
+                    >
+                      {entry.rank <= 3
+                        ? entry.rank === 1
+                          ? "🥇"
+                          : entry.rank === 2
+                          ? "🥈"
+                          : "🥉"
+                        : entry.rank}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm text-foreground truncate group-hover:text-accent transition-colors">
@@ -375,25 +488,38 @@ export default function TradingDashboard() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className={`text-xs font-medium ${
-                        entry.change >= 0 ? 'text-success' : 'text-destructive'
-                      }`}>
-                        {entry.change >= 0 ? '+' : ''}{entry.changePercent.toFixed(1)}%
+                      <p
+                        className={`text-xs font-medium ${
+                          entry.change >= 0
+                            ? "text-success"
+                            : "text-destructive"
+                        }`}
+                      >
+                        {entry.change >= 0 ? "+" : ""}
+                        {entry.changePercent.toFixed(1)}%
                       </p>
                     </div>
                   </div>
                 ))}
-                
+
                 <div className="mt-6 pt-4 border-t border-border/50">
                   <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-2">Your Position</p>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Your Position
+                    </p>
                     <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-primary/10 border border-primary/20">
                       <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center">
-                        <span className="font-bold text-primary text-sm">#47</span>
+                        <span className="font-bold text-primary text-sm">
+                          #47
+                        </span>
                       </div>
                       <div className="text-left">
-                        <p className="font-semibold text-sm text-primary">You</p>
-                        <p className="text-xs text-muted-foreground">{formatCurrency(94750.50)}</p>
+                        <p className="font-semibold text-sm text-primary">
+                          You
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatCurrency(94750.5)}
+                        </p>
                       </div>
                     </div>
                   </div>
