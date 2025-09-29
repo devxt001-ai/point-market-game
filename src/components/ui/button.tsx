@@ -15,6 +15,12 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // Trading-specific variants
+        success: "bg-success text-success-foreground hover:bg-success/90 shadow-lg",
+        danger: "bg-danger text-danger-foreground hover:bg-danger/90 shadow-lg",
+        trading: "bg-gradient-trading text-white hover:opacity-90 shadow-lg shadow-primary/25",
+        profit: "bg-gradient-profit text-white hover:opacity-90 shadow-lg shadow-success/25",
+        loss: "bg-gradient-loss text-white hover:opacity-90 shadow-lg shadow-danger/25",
       },
       size: {
         default: "h-10 px-4 py-2",

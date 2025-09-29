@@ -57,6 +57,25 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Trading-specific colors
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        danger: {
+          DEFAULT: "hsl(var(--danger))",
+          foreground: "hsl(var(--danger-foreground))",
+        },
+        chart: {
+          grid: "hsl(var(--chart-grid))",
+          positive: "hsl(var(--chart-positive))",
+          negative: "hsl(var(--chart-negative))",
+        },
+      },
+      backgroundImage: {
+        'gradient-trading': 'var(--gradient-trading)',
+        'gradient-profit': 'var(--gradient-profit)',
+        'gradient-loss': 'var(--gradient-loss)',
       },
       borderRadius: {
         lg: "var(--radius)",
