@@ -21,6 +21,7 @@ const Markets = () => {
   const [query, setQuery] = useState("");
   const [allSymbols, setAllSymbols] = useState<MarketSymbol[]>([]);
   const [filteredSymbols, setFilteredSymbols] = useState<MarketSymbol[]>([]);
+  const [pageSymbols, setPageSymbols] = useState<MarketSymbol[]>([]);
   const [pageStocks, setPageStocks] = useState<StockQuote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,15 +92,28 @@ const Markets = () => {
         const start = (currentPage - 1) * pageSize;
         const end = start + pageSize;
         const pageSyms = filteredSymbols.slice(start, end);
+        setPageSymbols(pageSyms);
         const quotes = await Promise.all(
           pageSyms.map(async (s) => finnhubService.getStockQuote(s.symbol))
         );
-        const withNames: StockQuote[] = (
-          quotes.filter((q): q is StockQuote => q !== null)
-        ).map((q, idx) => ({
-          ...q,
-          company: pageSyms[idx]?.description || q.company || q.symbol,
-        }));
+        const withNames: StockQuote[] = pageSyms.map((sym, idx) => {
+          const q = quotes[idx];
+          if (q) {
+            return {
+              ...q,
+              company: sym.description || q.company || sym.symbol,
+            };
+          }
+          // Fallback stub to ensure exactly pageSize items render on each page
+          return {
+            symbol: sym.symbol,
+            company: sym.description || sym.symbol,
+            price: 0,
+            change: 0,
+            changePercent: 0,
+            volume: 0,
+          };
+        });
         setPageStocks(withNames);
         setLastUpdated(new Date());
       } catch (e) {
@@ -112,11 +126,19 @@ const Markets = () => {
     if (filteredSymbols.length > 0) run();
   }, [filteredSymbols, currentPage]);
 
+  // Ensure "Most Active" sorts by volume descending without filtering everything out
+  useEffect(() => {
+    if (filter === "active") {
+      setSortKey("volume");
+      setSortDirAsc(false);
+    }
+  }, [filter]);
+
   const filtered = useMemo(() => {
     let arr = [...pageStocks];
     if (filter === "gainers") arr = arr.filter((s) => (s.changePercent ?? 0) > 0);
     if (filter === "losers") arr = arr.filter((s) => (s.changePercent ?? 0) < 0);
-    if (filter === "active") arr = arr.filter((s) => (s.volume ?? 0) > 0);
+    // For "active", do not filter out zeros; just sort by volume
     const dir = sortDirAsc ? 1 : -1;
     arr.sort((a, b) => {
       const va = a[sortKey] ?? 0;
@@ -241,7 +263,7 @@ const Markets = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filtered.map((s) => (
+                {(filter === "all" ? pageStocks : filtered).map((s) => (
                   <Card key={s.symbol} className="bg-gradient-to-r from-card/50 to-card border-border/30 hover:border-primary/30 transition-all duration-300 hover:shadow-lg group">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
@@ -262,7 +284,7 @@ const Markets = () => {
                               {s.change.toFixed(2)} ({(s.changePercent ?? 0).toFixed(2)}%)
                             </span>
                           </div>
-                          {typeof s.volume === "number" && (
+                          {typeof s.volume === "number" && s.volume > 0 && (
                             <p className="text-xs text-muted-foreground mt-1">Vol: {s.volume.toLocaleString()}</p>
                           )}
                         </div>
