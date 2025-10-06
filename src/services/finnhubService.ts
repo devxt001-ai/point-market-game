@@ -1,9 +1,6 @@
-import finnhub from "finnhub";
-
-// Initialize Finnhub client with API key directly
-const finnhubClient = new finnhub.DefaultApi(
-  "d3da5rpr01qtc6ejhlcgd3da5rpr01qtc6ejhld0"
-);
+// Finnhub REST API via browser-native fetch to ensure Vercel build compatibility
+const FINNHUB_BASE = "https://finnhub.io/api/v1";
+const API_KEY: string = import.meta.env?.VITE_FINNHUB_API_KEY ?? ""; // Configure VITE_FINNHUB_API_KEY in your environment for production deployments
 
 export interface StockQuote {
   symbol: string;
@@ -96,34 +93,20 @@ class FinnhubService {
    */
   async getStockQuote(symbol: string): Promise<StockQuote | null> {
     try {
-      return new Promise<StockQuote | null>((resolve, reject) => {
-        finnhubClient.quote(
-          symbol,
-          (error: FinnhubError | null, data: FinnhubQuoteResponse) => {
-            if (error) {
-              console.error(`Error fetching quote for ${symbol}:`, error);
-              reject(error);
-              return;
-            }
-
-            if (!data || data.c === 0) {
-              resolve(null);
-              return;
-            }
-
-            const quote: StockQuote = {
-              symbol,
-              company: symbol, // We'll get company name separately
-              price: data.c, // Current price
-              change: data.d, // Change
-              changePercent: data.dp, // Percent change
-              volume: data.v, // Volume (if available)
-            };
-
-            resolve(quote);
-          }
-        );
-      });
+      const res = await fetch(
+        `${FINNHUB_BASE}/quote?symbol=${encodeURIComponent(symbol)}&token=${API_KEY}`
+      );
+      if (!res.ok) throw new Error(`Quote fetch failed: ${res.status}`);
+      const data: FinnhubQuoteResponse = await res.json();
+      if (!data || data.c === 0) return null;
+      return {
+        symbol,
+        company: symbol,
+        price: data.c,
+        change: data.d,
+        changePercent: data.dp,
+        volume: data.v,
+      };
     } catch (error) {
       console.error(`Error in getStockQuote for ${symbol}:`, error);
       return null;
@@ -135,28 +118,13 @@ class FinnhubService {
    */
   async getCompanyProfile(symbol: string): Promise<CompanyProfile | null> {
     try {
-      return new Promise<CompanyProfile | null>((resolve, reject) => {
-        finnhubClient.companyProfile2(
-          { symbol: symbol },
-          (error: FinnhubError | null, data: CompanyProfile) => {
-            if (error) {
-              console.error(
-                `Error fetching company profile for ${symbol}:`,
-                error
-              );
-              reject(error);
-              return;
-            }
-
-            if (!data || !data.name) {
-              resolve(null);
-              return;
-            }
-
-            resolve(data as CompanyProfile);
-          }
-        );
-      });
+      const res = await fetch(
+        `${FINNHUB_BASE}/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${API_KEY}`
+      );
+      if (!res.ok) throw new Error(`Profile fetch failed: ${res.status}`);
+      const data: CompanyProfile = await res.json();
+      if (!data || !data.name) return null;
+      return data;
     } catch (error) {
       console.error(`Error in getCompanyProfile for ${symbol}:`, error);
       return null;
@@ -198,20 +166,12 @@ class FinnhubService {
    */
   async searchStocks(query: string): Promise<FinnhubSearchResult["result"]> {
     try {
-      return new Promise<FinnhubSearchResult["result"]>((resolve, reject) => {
-        finnhubClient.symbolSearch(
-          query,
-          (error: FinnhubError | null, data: FinnhubSearchResult) => {
-            if (error) {
-              console.error(`Error searching stocks for ${query}:`, error);
-              reject(error);
-              return;
-            }
-
-            resolve(data?.result || []);
-          }
-        );
-      });
+      const res = await fetch(
+        `${FINNHUB_BASE}/search?q=${encodeURIComponent(query)}&token=${API_KEY}`
+      );
+      if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+      const data: FinnhubSearchResult = await res.json();
+      return data?.result || [];
     } catch (error) {
       console.error(`Error in searchStocks for ${query}:`, error);
       return [];
@@ -223,20 +183,12 @@ class FinnhubService {
    */
   async getMarketStatus(): Promise<FinnhubMarketStatus | null> {
     try {
-      return new Promise<FinnhubMarketStatus | null>((resolve, reject) => {
-        finnhubClient.marketStatus(
-          "US",
-          (error: FinnhubError | null, data: FinnhubMarketStatus) => {
-            if (error) {
-              console.error("Error fetching market status:", error);
-              reject(error);
-              return;
-            }
-
-            resolve(data);
-          }
-        );
-      });
+      const res = await fetch(
+        `${FINNHUB_BASE}/market/status?exchange=US&token=${API_KEY}`
+      );
+      if (!res.ok) throw new Error(`Market status failed: ${res.status}`);
+      const data: FinnhubMarketStatus = await res.json();
+      return data || null;
     } catch (error) {
       console.error("Error in getMarketStatus:", error);
       return null;
@@ -248,26 +200,17 @@ class FinnhubService {
    */
   async getUSSymbols(limit?: number): Promise<MarketSymbol[]> {
     try {
-      const symbols: FinnhubSymbol[] = await new Promise((resolve, reject) => {
-        // Finnhub SDK expects (exchange, opts, callback); pass empty opts to avoid callback mis-detection
-        finnhubClient.stockSymbols("US", {}, (error: FinnhubError | null, data: FinnhubSymbol[]) => {
-          if (error) {
-            console.error("Error fetching US symbols:", error);
-            reject(error);
-            return;
-          }
-          resolve(data || []);
-        });
-      });
-
+      const res = await fetch(
+        `${FINNHUB_BASE}/stock/symbol?exchange=US&token=${API_KEY}`
+      );
+      if (!res.ok) throw new Error(`Symbols fetch failed: ${res.status}`);
+      const symbols: FinnhubSymbol[] = await res.json();
       const mapped: MarketSymbol[] = (symbols || []).map((s: FinnhubSymbol) => ({
         symbol: s.symbol,
         description: s.description || s.displaySymbol || s.symbol,
       }));
-
       return typeof limit === "number" ? mapped.slice(0, limit) : mapped;
     } catch (error) {
-      // Fallback to popular stocks if symbol list fails
       const popular = await this.getPopularStocks(100);
       return popular.map((p) => ({ symbol: p.symbol, description: p.company || p.symbol }));
     }
