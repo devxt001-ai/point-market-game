@@ -116,23 +116,23 @@ export default function AuthPage() {
         </div>
       </header>
 
-      {/* Main content */}
-      <div className="container mx-auto px-6 pb-12">
-        <div className="grid lg:grid-cols-2 gap-10 items-center">
+      {/* Main content - centered layout */}
+      <div className="container mx-auto px-6 pb-12 flex items-center">
+        <div className="mx-auto max-w-6xl grid lg:grid-cols-2 gap-12 items-center">
           {/* Left - Hero and features */}
           <div className="space-y-8">
-            <div className="space-y-4">
-              <h1 className="text-5xl md:text-6xl font-bold leading-tight">
+            <div className="space-y-4 text-center md:text-left">
+              <h1 className="text-4xl md:text-6xl font-bold leading-tight">
                 <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
                   Trade Smarter.
                 </span>
                 <br />
                 <span className="text-foreground/80">Compete. Learn. Win.</span>
               </h1>
-              <p className="text-lg md:text-xl text-muted-foreground max-w-xl">
+              <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto md:mx-0">
                 Professional virtual trading with live quotes, beautiful charts, and a competitive leaderboard.
               </p>
-              <div className="flex gap-3">
+              <div className="flex gap-3 justify-center md:justify-start">
                 <Button variant="trading" className="gap-2">
                   Get Started <ArrowRight className="h-4 w-4" />
                 </Button>
