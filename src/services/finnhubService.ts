@@ -8,6 +8,7 @@ export interface StockQuote {
   price: number;
   change: number;
   changePercent: number;
+  previousClose?: number;
   volume?: number;
 }
 
@@ -105,6 +106,7 @@ class FinnhubService {
         price: data.c,
         change: data.d,
         changePercent: data.dp,
+        previousClose: data.pc,
         volume: data.v,
       };
     } catch (error) {

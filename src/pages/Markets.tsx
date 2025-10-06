@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import AppNavbar from "@/components/AppNavbar";
+import { useFinnhubStream } from "@/hooks/useFinnhubStream";
 import { finnhubService, type StockQuote, type MarketSymbol } from "@/services/finnhubService";
 import { TrendingUp, TrendingDown, Search, RefreshCw, Star } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -126,6 +127,10 @@ const Markets = () => {
     if (filteredSymbols.length > 0) run();
   }, [filteredSymbols, currentPage]);
 
+  // Stream live prices for the current page symbols
+  const symbolsForStream = useMemo(() => pageSymbols.map((s) => s.symbol), [pageSymbols]);
+  const { prices: livePrices, lastUpdated: streamUpdated } = useFinnhubStream(symbolsForStream);
+
   // Ensure "Most Active" sorts by volume descending without filtering everything out
   useEffect(() => {
     if (filter === "active") {
@@ -134,8 +139,22 @@ const Markets = () => {
     }
   }, [filter]);
 
+  // Overlay live prices onto the current page stocks
+  const realtimeStocks = useMemo(() => {
+    return pageStocks.map((s) => {
+      const lp = livePrices[s.symbol];
+      if (typeof lp === "number" && lp > 0) {
+        const pc = s.previousClose ?? 0;
+        const change = pc > 0 ? lp - pc : lp - s.price;
+        const changePercent = pc > 0 ? ((lp - pc) / pc) * 100 : (change / (s.price || 1)) * 100;
+        return { ...s, price: lp, change, changePercent };
+      }
+      return s;
+    });
+  }, [pageStocks, livePrices]);
+
   const filtered = useMemo(() => {
-    let arr = [...pageStocks];
+    let arr = [...realtimeStocks];
     if (filter === "gainers") arr = arr.filter((s) => (s.changePercent ?? 0) > 0);
     if (filter === "losers") arr = arr.filter((s) => (s.changePercent ?? 0) < 0);
     // For "active", do not filter out zeros; just sort by volume
@@ -149,7 +168,7 @@ const Markets = () => {
       return dir * ((va as number) - (vb as number));
     });
     return arr;
-  }, [pageStocks, filter, sortKey, sortDirAsc]);
+  }, [realtimeStocks, filter, sortKey, sortDirAsc]);
 
   const toggleWatch = (symbol: string) => {
     setWatchlist((prev) => {
@@ -176,7 +195,7 @@ const Markets = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <AppNavbar
-        lastUpdated={lastUpdated}
+        lastUpdated={streamUpdated || lastUpdated}
         userEmail={user?.email || null}
         onLogout={handleLogout}
       />
@@ -189,7 +208,9 @@ const Markets = () => {
             <p className="text-xs text-muted-foreground">Browse stocks in real time</p>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {lastUpdated && <span>Updated {lastUpdated.toLocaleTimeString()}</span>}
+            {(streamUpdated || lastUpdated) && (
+              <span>Updated {(streamUpdated || lastUpdated)!.toLocaleTimeString()}</span>
+            )}
             <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} className="gap-1">
               <RefreshCw className="h-4 w-4" /> Refresh
             </Button>
@@ -219,8 +240,8 @@ const Markets = () => {
                   <option value="changePercent">Change %</option>
                   <option value="volume">Volume</option>
                 </select>
-                <Button variant="outline" size="sm" onClick={() => setSortDirAsc((v) => !v)}>
-                  {sortDirAsc ? "Asc" : "Desc"}
+                <Button variant="outline" size="sm" onClick={() => setSortDirAsc((v) => !v)} className="min-w-[72px]">
+                  {sortDirAsc ? "Ascending" : "Descending"}
                 </Button>
               </div>
             </div>
@@ -263,17 +284,17 @@ const Markets = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(filter === "all" ? pageStocks : filtered).map((s) => (
-                  <Card key={s.symbol} className="bg-gradient-to-r from-card/50 to-card border-border/30 hover:border-primary/30 transition-all duration-300 hover:shadow-lg group">
+                {filtered.map((s) => (
+                  <Card key={s.symbol} className="bg-card/80 border border-border/40 hover:border-primary/40 transition-all duration-300 hover:shadow-xl group rounded-xl">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-lg">{s.symbol}</h3>
+                            <h3 className="font-bold text-lg tracking-wide group-hover:text-primary transition-colors">{s.symbol}</h3>
                             <Badge variant="outline" className="text-xs">{s.company}</Badge>
                           </div>
-                          <p className="text-2xl font-bold">{formatCurrency(s.price)}</p>
-                          <div className="flex items-center gap-1">
+                          <p className="text-2xl font-bold mt-1">{formatCurrency(s.price)}</p>
+                          <div className="flex items-center gap-1 mt-1">
                             {s.change >= 0 ? (
                               <TrendingUp className="h-4 w-4 text-success" />
                             ) : (
@@ -288,7 +309,7 @@ const Markets = () => {
                             <p className="text-xs text-muted-foreground mt-1">Vol: {s.volume.toLocaleString()}</p>
                           )}
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => toggleWatch(s.symbol)} className="hover:bg-primary/10">
+                        <Button variant="ghost" size="sm" onClick={() => toggleWatch(s.symbol)} className="hover:bg-primary/10 rounded-full">
                           <Star className={`h-5 w-5 ${watchlist[s.symbol] ? "text-yellow-500" : "text-muted-foreground"}`} />
                         </Button>
                       </div>
