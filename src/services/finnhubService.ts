@@ -66,6 +66,19 @@ interface FinnhubMarketStatus {
   t: number;
 }
 
+export interface MarketSymbol {
+  symbol: string;
+  description?: string;
+}
+
+// Minimal shape returned by Finnhub's stockSymbols endpoint
+interface FinnhubSymbol {
+  symbol: string;
+  displaySymbol?: string;
+  description?: string;
+  type?: string;
+}
+
 class FinnhubService {
   private readonly popularStocks = [
     "AAPL",
@@ -227,6 +240,36 @@ class FinnhubService {
     } catch (error) {
       console.error("Error in getMarketStatus:", error);
       return null;
+    }
+  }
+
+  /**
+   * Get list of US stock symbols to power pagination and search
+   */
+  async getUSSymbols(limit?: number): Promise<MarketSymbol[]> {
+    try {
+      const symbols: FinnhubSymbol[] = await new Promise((resolve, reject) => {
+        // Finnhub SDK expects (exchange, opts, callback); pass empty opts to avoid callback mis-detection
+        finnhubClient.stockSymbols("US", {}, (error: FinnhubError | null, data: FinnhubSymbol[]) => {
+          if (error) {
+            console.error("Error fetching US symbols:", error);
+            reject(error);
+            return;
+          }
+          resolve(data || []);
+        });
+      });
+
+      const mapped: MarketSymbol[] = (symbols || []).map((s: FinnhubSymbol) => ({
+        symbol: s.symbol,
+        description: s.description || s.displaySymbol || s.symbol,
+      }));
+
+      return typeof limit === "number" ? mapped.slice(0, limit) : mapped;
+    } catch (error) {
+      // Fallback to popular stocks if symbol list fails
+      const popular = await this.getPopularStocks(100);
+      return popular.map((p) => ({ symbol: p.symbol, description: p.company || p.symbol }));
     }
   }
 }

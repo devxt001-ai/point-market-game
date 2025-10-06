@@ -17,6 +17,8 @@ import {
   Trophy,
 } from "lucide-react";
 import { finnhubService, type StockQuote } from "@/services/finnhubService";
+import AppNavbar from "./AppNavbar";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -229,95 +231,13 @@ export default function TradingDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      {/* Enhanced Navbar */}
-      <nav className="bg-gradient-to-r from-card via-card/95 to-card border-b border-border/50 shadow-lg backdrop-blur-sm">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center">
-                  <TrendingUp className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                    Point Market
-                  </h1>
-                  <p className="text-xs text-muted-foreground">
-                    Trading Dashboard
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <Badge
-                  variant="outline"
-                  className="bg-success/10 border-success/30 text-success hover:bg-success/20 transition-colors px-3 py-1"
-                >
-                  <div className="w-2 h-2 bg-success rounded-full mr-2 animate-pulse"></div>
-                  Market Open
-                </Badge>
-
-                {lastUpdated && (
-                  <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>
-                      Last updated: {lastUpdated.toLocaleTimeString()}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="hidden md:flex items-center gap-6">
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">
-                    Portfolio Value
-                  </p>
-                  <p className="text-xl font-bold text-primary">
-                    {totalHoldings != null
-                      ? formatCurrency(totalHoldings)
-                      : "—"}
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Today's P&L</p>
-                  <p className="text-lg font-bold text-success">
-                    {todaysPnL != null && todaysPnL >= 0 ? "+" : ""}
-                    {todaysPnL != null
-                      ? formatCurrency(Math.abs(todaysPnL))
-                      : "—"}
-                  </p>
-                </div>
-              </div>
-
-              {user && (
-                <div className="flex items-center gap-3">
-                  <div className="hidden md:block text-right">
-                    <p className="text-sm font-medium text-foreground">
-                      Welcome back!
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {user.email}
-                    </p>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive transition-all duration-200"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span className="hidden sm:inline">Logout</span>
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <AppNavbar
+        lastUpdated={lastUpdated}
+        userEmail={user?.email || null}
+        onLogout={handleLogout}
+        portfolioValue={totalHoldings ?? null}
+        todaysPnL={todaysPnL ?? null}
+      />
 
       <div className="container mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -417,6 +337,18 @@ export default function TradingDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Navigation to Markets */}
+          <div className="lg:col-span-3 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="px-2 py-1">Explore</Badge>
+                <Link to="/markets">
+                  <Button size="sm" variant="default">Markets</Button>
+                </Link>
+              </div>
+            </div>
           </div>
 
           {/* Enhanced Live Market Data */}
