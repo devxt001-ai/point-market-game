@@ -75,6 +75,17 @@ export default function TradingDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  // Supabase-backed UI state
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [totalHoldings, setTotalHoldings] = useState<number | null>(null);
+  const [todaysPnL, setTodaysPnL] = useState<number | null>(null);
+  const [myDailyChangePercent, setMyDailyChangePercent] = useState<
+    number | null
+  >(null);
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>(
+    []
+  );
+  const [myRank, setMyRank] = useState<number | null>(null);
 
   const handleLogout = async () => {
     try {
@@ -108,6 +119,101 @@ export default function TradingDashboard() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch user wallet, portfolio aggregates, and leaderboard from Supabase
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchSupabaseData = async () => {
+      try {
+        // Get application user row by auth_user_id
+        const { data: appUser, error: userErr } = await supabase
+          .from("users")
+          .select("id, wallet_balance, total_portfolio_value, username")
+          .eq("auth_user_id", user.id)
+          .maybeSingle();
+
+        if (userErr) throw userErr;
+
+        if (appUser) {
+          setWalletBalance(appUser.wallet_balance ?? 0);
+          setTotalHoldings(appUser.total_portfolio_value ?? null);
+
+          // Aggregate portfolio for precise holdings and P&L (client-side reduce for safe typing)
+          const { data: portfolioRows, error: portErr } = await supabase
+            .from("portfolio")
+            .select("current_value, realized_pnl, unrealized_pnl")
+            .eq("user_id", appUser.id);
+
+          if (portErr) throw portErr;
+
+          if (portfolioRows && portfolioRows.length > 0) {
+            const totals = portfolioRows.reduce(
+              (
+                acc: { total: number; realized: number; unrealized: number },
+                row: {
+                  current_value: number | null;
+                  realized_pnl: number | null;
+                  unrealized_pnl: number | null;
+                }
+              ) => ({
+                total: acc.total + (row.current_value ?? 0),
+                realized: acc.realized + (row.realized_pnl ?? 0),
+                unrealized: acc.unrealized + (row.unrealized_pnl ?? 0),
+              }),
+              { total: 0, realized: 0, unrealized: 0 }
+            );
+            setTotalHoldings(
+              totals.total || appUser.total_portfolio_value || null
+            );
+            setTodaysPnL(totals.realized + totals.unrealized);
+          }
+
+          // Leaderboard top entries
+          const { data: lb, error: lbErr } = await supabase
+            .from("leaderboard")
+            .select(
+              "rank_position, username, portfolio_value, daily_change, daily_change_percent"
+            )
+            .order("rank_position", { ascending: true })
+            .limit(10);
+
+          if (lbErr) throw lbErr;
+
+          if (lb) {
+            setLeaderboardData(
+              lb.map((x) => ({
+                rank: x.rank_position ?? 0,
+                username: x.username,
+                portfolioValue: x.portfolio_value,
+                change: x.daily_change ?? 0,
+                changePercent: x.daily_change_percent ?? 0,
+              }))
+            );
+          }
+
+          // Current user's leaderboard entry
+          const { data: myLb, error: myLbErr } = await supabase
+            .from("leaderboard")
+            .select("rank_position, daily_change, daily_change_percent")
+            .eq("user_id", appUser.id)
+            .maybeSingle();
+
+          if (myLbErr) throw myLbErr;
+
+          if (myLb) {
+            setMyRank(myLb.rank_position ?? null);
+            if (myLb.daily_change != null) setTodaysPnL(myLb.daily_change);
+            setMyDailyChangePercent(myLb.daily_change_percent ?? null);
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching Supabase data:", e);
+      }
+    };
+
+    fetchSupabaseData();
+  }, [user]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -169,14 +275,19 @@ export default function TradingDashboard() {
                     Portfolio Value
                   </p>
                   <p className="text-xl font-bold text-primary">
-                    {formatCurrency(110501.0)}
+                    {totalHoldings != null
+                      ? formatCurrency(totalHoldings)
+                      : "—"}
                   </p>
                 </div>
 
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Today's P&L</p>
                   <p className="text-lg font-bold text-success">
-                    +{formatCurrency(1250.75)}
+                    {todaysPnL != null && todaysPnL >= 0 ? "+" : ""}
+                    {todaysPnL != null
+                      ? formatCurrency(Math.abs(todaysPnL))
+                      : "—"}
                   </p>
                 </div>
               </div>
@@ -220,7 +331,9 @@ export default function TradingDashboard() {
                       Wallet Balance
                     </p>
                     <p className="text-3xl font-bold text-success mt-1">
-                      {formatCurrency(15750.5)}
+                      {walletBalance != null
+                        ? formatCurrency(walletBalance)
+                        : "—"}
                     </p>
                     <p className="text-xs text-success/70 mt-1">
                       Available for trading
@@ -241,7 +354,9 @@ export default function TradingDashboard() {
                       Total Holdings
                     </p>
                     <p className="text-3xl font-bold text-primary mt-1">
-                      {formatCurrency(94750.5)}
+                      {totalHoldings != null
+                        ? formatCurrency(totalHoldings)
+                        : "—"}
                     </p>
                     <p className="text-xs text-primary/70 mt-1">
                       Portfolio value
@@ -262,9 +377,18 @@ export default function TradingDashboard() {
                       Today's P&L
                     </p>
                     <p className="text-3xl font-bold text-success mt-1">
-                      +{formatCurrency(1250.75)}
+                      {todaysPnL != null && todaysPnL >= 0 ? "+" : ""}
+                      {todaysPnL != null
+                        ? formatCurrency(Math.abs(todaysPnL))
+                        : "—"}
                     </p>
-                    <p className="text-xs text-success/70 mt-1">+1.14% today</p>
+                    <p className="text-xs text-success/70 mt-1">
+                      {myDailyChangePercent != null
+                        ? `${
+                            myDailyChangePercent >= 0 ? "+" : ""
+                          }${myDailyChangePercent.toFixed(2)}% today`
+                        : "—"}
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-success/20 rounded-xl flex items-center justify-center">
                     <TrendingUp className="h-7 w-7 text-success" />
@@ -280,7 +404,9 @@ export default function TradingDashboard() {
                     <p className="text-sm text-muted-foreground font-medium">
                       Leaderboard Rank
                     </p>
-                    <p className="text-3xl font-bold text-accent mt-1">#47</p>
+                    <p className="text-3xl font-bold text-accent mt-1">
+                      {myRank != null ? `#${myRank}` : "—"}
+                    </p>
                     <p className="text-xs text-accent/70 mt-1">
                       Top 15% globally
                     </p>
@@ -455,52 +581,54 @@ export default function TradingDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {mockLeaderboard.map((entry, index) => (
-                  <div
-                    key={entry.rank}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-card/50 to-card/30 hover:from-accent/10 hover:to-accent/5 transition-all duration-300 group"
-                  >
+                {(leaderboardData?.length ? leaderboardData : []).map(
+                  (entry) => (
                     <div
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
-                        entry.rank === 1
-                          ? "bg-yellow-500/20 text-yellow-600"
-                          : entry.rank === 2
-                          ? "bg-gray-400/20 text-gray-600"
-                          : entry.rank === 3
-                          ? "bg-orange-500/20 text-orange-600"
-                          : "bg-accent/20 text-accent"
-                      }`}
+                      key={entry.rank}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-card/50 to-card/30 hover:from-accent/10 hover:to-accent/5 transition-all duration-300 group"
                     >
-                      {entry.rank <= 3
-                        ? entry.rank === 1
-                          ? "🥇"
-                          : entry.rank === 2
-                          ? "🥈"
-                          : "🥉"
-                        : entry.rank}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-foreground truncate group-hover:text-accent transition-colors">
-                        {entry.username}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatCurrency(entry.portfolioValue)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p
-                        className={`text-xs font-medium ${
-                          entry.change >= 0
-                            ? "text-success"
-                            : "text-destructive"
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
+                          entry.rank === 1
+                            ? "bg-yellow-500/20 text-yellow-600"
+                            : entry.rank === 2
+                            ? "bg-gray-400/20 text-gray-600"
+                            : entry.rank === 3
+                            ? "bg-orange-500/20 text-orange-600"
+                            : "bg-accent/20 text-accent"
                         }`}
                       >
-                        {entry.change >= 0 ? "+" : ""}
-                        {entry.changePercent.toFixed(1)}%
-                      </p>
+                        {entry.rank <= 3
+                          ? entry.rank === 1
+                            ? "🥇"
+                            : entry.rank === 2
+                            ? "🥈"
+                            : "🥉"
+                          : entry.rank}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm text-foreground truncate group-hover:text-accent transition-colors">
+                          {entry.username}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatCurrency(entry.portfolioValue)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p
+                          className={`text-xs font-medium ${
+                            entry.change >= 0
+                              ? "text-success"
+                              : "text-destructive"
+                          }`}
+                        >
+                          {entry.change >= 0 ? "+" : ""}
+                          {entry.changePercent.toFixed(1)}%
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                )}
 
                 <div className="mt-6 pt-4 border-t border-border/50">
                   <div className="text-center">
@@ -510,7 +638,7 @@ export default function TradingDashboard() {
                     <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-primary/10 border border-primary/20">
                       <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center">
                         <span className="font-bold text-primary text-sm">
-                          #47
+                          {myRank != null ? `#${myRank}` : "—"}
                         </span>
                       </div>
                       <div className="text-left">
@@ -518,7 +646,9 @@ export default function TradingDashboard() {
                           You
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatCurrency(94750.5)}
+                          {totalHoldings != null
+                            ? formatCurrency(totalHoldings)
+                            : "—"}
                         </p>
                       </div>
                     </div>
