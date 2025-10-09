@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,8 @@ import { finnhubService, type StockQuote, type MarketSymbol } from "@/services/f
 import { TrendingUp, TrendingDown, Search, RefreshCw, Star } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { TradeModal } from "@/components/TradeModal";
+import { toast } from "@/components/ui/sonner";
 
 type SortKey = "symbol" | "price" | "changePercent" | "volume";
 type FilterKey = "all" | "gainers" | "losers" | "active";
@@ -32,6 +34,9 @@ const Markets = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = 9;
+  const [tradeModalOpen, setTradeModalOpen] = useState(false);
+  const [selectedStock, setSelectedStock] = useState<StockQuote | null>(null);
+  const [tradeType, setTradeType] = useState<"buy" | "sell">("buy");
   const [watchlist, setWatchlist] = useState<Record<string, boolean>>(() => {
     try {
       const raw = localStorage.getItem("pm_watchlist");
@@ -139,6 +144,10 @@ const Markets = () => {
     }
   }, [filter]);
 
+  // Track price changes for visual effects
+  const prevPrices = useRef<Record<string, number>>({});
+  const changedPrices = useRef<Record<string, {direction: 'up'|'down', timestamp: number}>>({});
+  
   // Overlay live prices onto the current page stocks
   const realtimeStocks = useMemo(() => {
     return pageStocks.map((s) => {
@@ -147,6 +156,17 @@ const Markets = () => {
         const pc = s.previousClose ?? 0;
         const change = pc > 0 ? lp - pc : lp - s.price;
         const changePercent = pc > 0 ? ((lp - pc) / pc) * 100 : (change / (s.price || 1)) * 100;
+        
+        // Track price changes for visual effects
+        const prevPrice = prevPrices.current[s.symbol];
+        if (prevPrice && prevPrice !== lp) {
+          changedPrices.current[s.symbol] = {
+            direction: lp > prevPrice ? 'up' : 'down',
+            timestamp: Date.now()
+          };
+        }
+        prevPrices.current[s.symbol] = lp;
+        
         return { ...s, price: lp, change, changePercent };
       }
       return s;
@@ -304,6 +324,7 @@ const Markets = () => {
                               {s.change >= 0 ? "+" : ""}
                               {s.change.toFixed(2)} ({(s.changePercent ?? 0).toFixed(2)}%)
                             </span>
+                            {streamUpdated && <Badge variant="outline" className="ml-1 text-xs bg-green-500/10 text-green-500">LIVE</Badge>}
                           </div>
                           {typeof s.volume === "number" && s.volume > 0 && (
                             <p className="text-xs text-muted-foreground mt-1">Vol: {s.volume.toLocaleString()}</p>
@@ -314,8 +335,37 @@ const Markets = () => {
                         </Button>
                       </div>
                       <div className="mt-3 flex gap-2">
-                        <Button size="sm" className="bg-success hover:bg-success/90 text-white">Buy</Button>
-                        <Button size="sm" variant="outline" className="border-destructive text-destructive hover:bg-destructive hover:text-white">Sell</Button>
+                        <Button 
+                          size="sm" 
+                          className="bg-success hover:bg-success/90 text-white"
+                          onClick={() => {
+                            if (!user) {
+                              toast.error("Please log in to trade");
+                              return;
+                            }
+                            setSelectedStock(s);
+                            setTradeType("buy");
+                            setTradeModalOpen(true);
+                          }}
+                        >
+                          Buy
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="border-destructive text-destructive hover:bg-destructive hover:text-white"
+                          onClick={() => {
+                            if (!user) {
+                              toast.error("Please log in to trade");
+                              return;
+                            }
+                            setSelectedStock(s);
+                            setTradeType("sell");
+                            setTradeModalOpen(true);
+                          }}
+                        >
+                          Sell
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -335,6 +385,22 @@ const Markets = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Trade Modal */}
+      {selectedStock && (
+        <TradeModal
+          isOpen={tradeModalOpen}
+          onClose={() => setTradeModalOpen(false)}
+          symbol={selectedStock.symbol}
+          companyName={selectedStock.company}
+          currentPrice={selectedStock.price}
+          tradeType={tradeType}
+          onTradeComplete={() => {
+            // Refresh the page to show updated portfolio
+            setCurrentPage(currentPage);
+          }}
+        />
+      )}
     </div>
   );
 };

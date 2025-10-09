@@ -101,6 +101,10 @@ export default function AppNavbar({
               <Link to="/markets">
                 <Button size="sm" variant="default">Markets</Button>
               </Link>
+              
+              <Link to="/portfolio">
+                <Button size="sm" variant="outline">Portfolio</Button>
+              </Link>
 
               <Button
                 variant="outline"

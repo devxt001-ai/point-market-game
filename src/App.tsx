@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import type { ReactNode } from "react";
 import Index from "./pages/Index";
 import Markets from "./pages/Markets";
+import Portfolio from "./pages/Portfolio";
 import NotFound from "./pages/NotFound";
 import Restricted from "./pages/Restricted";
 
@@ -41,6 +42,14 @@ const App = () => (
               element={
                 <RequireAuth>
                   <Markets />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/portfolio"
+              element={
+                <RequireAuth>
+                  <Portfolio />
                 </RequireAuth>
               }
             />

@@ -289,20 +289,41 @@ export default function TradingDashboard() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-success/10 via-success/5 to-transparent border-success/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <Card
+              className={
+                `bg-gradient-to-br to-transparent shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 ` +
+                (todaysPnL != null && todaysPnL < 0
+                  ? "from-destructive/10 via-destructive/5 border-destructive/20"
+                  : "from-success/10 via-success/5 border-success/20")
+              }
+            >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground font-medium">
                       Today's P&L
                     </p>
-                    <p className="text-3xl font-bold text-success mt-1">
+                    <p
+                      className={
+                        `text-3xl font-bold mt-1 ` +
+                        (todaysPnL != null && todaysPnL < 0
+                          ? "text-destructive"
+                          : "text-success")
+                      }
+                    >
                       {todaysPnL != null && todaysPnL >= 0 ? "+" : ""}
                       {todaysPnL != null
                         ? formatCurrency(Math.abs(todaysPnL))
                         : "—"}
                     </p>
-                    <p className="text-xs text-success/70 mt-1">
+                    <p
+                      className={
+                        `text-xs mt-1 ` +
+                        (todaysPnL != null && todaysPnL < 0
+                          ? "text-destructive/70"
+                          : "text-success/70")
+                      }
+                    >
                       {myDailyChangePercent != null
                         ? `${
                             myDailyChangePercent >= 0 ? "+" : ""
@@ -310,8 +331,19 @@ export default function TradingDashboard() {
                         : "—"}
                     </p>
                   </div>
-                  <div className="w-12 h-12 bg-success/20 rounded-xl flex items-center justify-center">
-                    <TrendingUp className="h-7 w-7 text-success" />
+                  <div
+                    className={
+                      `w-12 h-12 rounded-xl flex items-center justify-center ` +
+                      (todaysPnL != null && todaysPnL < 0
+                        ? "bg-destructive/20"
+                        : "bg-success/20")
+                    }
+                  >
+                    {todaysPnL != null && todaysPnL < 0 ? (
+                      <TrendingDown className="h-7 w-7 text-destructive" />
+                    ) : (
+                      <TrendingUp className="h-7 w-7 text-success" />
+                    )}
                   </div>
                 </div>
               </CardContent>
