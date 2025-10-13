@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,8 @@ import {
   Trophy,
 } from "lucide-react";
 import { finnhubService, type StockQuote } from "@/services/finnhubService";
+import { useFinnhubStream } from "@/hooks/useFinnhubStream";
+import { TradeModal } from "@/components/TradeModal";
 import AppNavbar from "./AppNavbar";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +31,7 @@ interface StockData {
   change: number;
   changePercent: number;
   volume?: number;
+  previousClose?: number;
 }
 
 interface LeaderboardEntry {
@@ -88,6 +91,18 @@ export default function TradingDashboard() {
     []
   );
   const [myRank, setMyRank] = useState<number | null>(null);
+  const [tradeModalOpen, setTradeModalOpen] = useState(false);
+  type SelectedStock = {
+    symbol: string;
+    company: string;
+    price: number;
+    change: number;
+    changePercent: number;
+    previousClose?: number;
+  };
+  const [selectedStock, setSelectedStock] = useState<SelectedStock | null>(null);
+  const [tradeType, setTradeType] = useState<"buy" | "sell">("buy");
+  const [supabaseRefreshTick, setSupabaseRefreshTick] = useState(0);
 
   const handleLogout = async () => {
     try {
@@ -121,6 +136,10 @@ export default function TradingDashboard() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Stream live prices for the popular stocks shown
+  const symbolsForStream = useMemo(() => stocks.map((s) => s.symbol), [stocks]);
+  const { prices: livePrices, lastUpdated: streamUpdated } = useFinnhubStream(symbolsForStream);
 
   // Fetch user wallet, portfolio aggregates, and leaderboard from Supabase
   useEffect(() => {
@@ -215,7 +234,7 @@ export default function TradingDashboard() {
     };
 
     fetchSupabaseData();
-  }, [user]);
+  }, [user, supabaseRefreshTick]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -232,7 +251,7 @@ export default function TradingDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <AppNavbar
-        lastUpdated={lastUpdated}
+        lastUpdated={streamUpdated || lastUpdated}
         userEmail={user?.email || null}
         onLogout={handleLogout}
         portfolioValue={totalHoldings ?? null}
@@ -410,7 +429,7 @@ export default function TradingDashboard() {
                     </div>
                     {lastUpdated && (
                       <span className="text-xs text-muted-foreground">
-                        Updated: {lastUpdated.toLocaleTimeString()}
+                        Updated: {(streamUpdated || lastUpdated)!.toLocaleTimeString()}
                       </span>
                     )}
                   </div>
@@ -452,7 +471,13 @@ export default function TradingDashboard() {
                   </div>
                 ) : (
                   <div className="grid gap-4">
-                    {stocks.map((stock) => (
+                    {stocks.map((stock) => {
+                      const prevClose = stock.previousClose ?? stock.price;
+                      const live = livePrices[stock.symbol];
+                      const price = typeof live === "number" && live > 0 ? live : stock.price;
+                      const change = price - prevClose;
+                      const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+                      return (
                       <Card
                         key={stock.symbol}
                         className="bg-gradient-to-r from-card/50 to-card border-border/30 hover:border-primary/30 transition-all duration-300 hover:shadow-lg group"
@@ -478,24 +503,24 @@ export default function TradingDashboard() {
                             <div className="flex items-center gap-6">
                               <div className="text-right">
                                 <p className="text-2xl font-bold text-foreground">
-                                  {formatCurrency(stock.price)}
+                                  {formatCurrency(price)}
                                 </p>
                                 <div className="flex items-center gap-1 justify-end">
-                                  {stock.change >= 0 ? (
+                                  {change >= 0 ? (
                                     <TrendingUp className="h-4 w-4 text-success" />
                                   ) : (
                                     <TrendingDown className="h-4 w-4 text-destructive" />
                                   )}
                                   <span
                                     className={`text-sm font-medium ${
-                                      stock.change >= 0
+                                      change >= 0
                                         ? "text-success"
                                         : "text-destructive"
                                     }`}
                                   >
-                                    {stock.change >= 0 ? "+" : ""}
-                                    {stock.change.toFixed(2)} (
-                                    {stock.changePercent.toFixed(2)}%)
+                                    {change >= 0 ? "+" : ""}
+                                    {change.toFixed(2)} (
+                                    {changePercent.toFixed(2)}%)
                                   </span>
                                 </div>
                               </div>
@@ -504,6 +529,18 @@ export default function TradingDashboard() {
                                 <Button
                                   size="sm"
                                   className="bg-success hover:bg-success/90 text-white px-6 py-2 font-medium shadow-md hover:shadow-lg transition-all duration-200"
+                                  onClick={() => {
+                                    setSelectedStock({
+                                      symbol: stock.symbol,
+                                      company: stock.company,
+                                      price,
+                                      change,
+                                      changePercent,
+                                      previousClose: prevClose,
+                                    });
+                                    setTradeType("buy");
+                                    setTradeModalOpen(true);
+                                  }}
                                 >
                                   Buy
                                 </Button>
@@ -511,6 +548,18 @@ export default function TradingDashboard() {
                                   size="sm"
                                   variant="outline"
                                   className="border-destructive text-destructive hover:bg-destructive hover:text-white px-6 py-2 font-medium transition-all duration-200"
+                                  onClick={() => {
+                                    setSelectedStock({
+                                      symbol: stock.symbol,
+                                      company: stock.company,
+                                      price,
+                                      change,
+                                      changePercent,
+                                      previousClose: prevClose,
+                                    });
+                                    setTradeType("sell");
+                                    setTradeModalOpen(true);
+                                  }}
                                 >
                                   Sell
                                 </Button>
@@ -519,7 +568,8 @@ export default function TradingDashboard() {
                           </div>
                         </CardContent>
                       </Card>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -621,8 +671,23 @@ export default function TradingDashboard() {
               </CardContent>
             </Card>
           </div>
-        </div>
       </div>
+      </div>
+
+      {/* Trade Modal */}
+      {selectedStock && (
+        <TradeModal
+          isOpen={tradeModalOpen}
+          onClose={() => setTradeModalOpen(false)}
+          symbol={selectedStock.symbol}
+          companyName={selectedStock.company}
+          currentPrice={selectedStock.price}
+          tradeType={tradeType}
+          onTradeComplete={() => {
+            setSupabaseRefreshTick((t) => t + 1);
+          }}
+        />
+      )}
     </div>
   );
 }
